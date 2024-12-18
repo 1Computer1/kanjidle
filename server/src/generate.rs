@@ -95,6 +95,10 @@ impl<'g, R: rand::Rng> Generator<'g, R> {
             .kanjis
             .values()
             .filter(|k| {
+                let nums = "一ニ三四五六七八九十百千万";
+                !nums.contains(k.ji.0)
+            })
+            .filter(|k| {
                 let class = self.kanji_data.kanji_metas.get(&k.ji).unwrap().class;
                 options.min_kanji_class <= class && class <= options.max_kanji_class
             })
