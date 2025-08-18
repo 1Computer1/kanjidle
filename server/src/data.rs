@@ -249,6 +249,9 @@ pub static JMDICT_KANA_INFO: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#""text":"([\p{Hiragana}\p{Katakana}ー]+)".+?"appliesToKanji":\[(.*?)\]"#).unwrap()
 });
 
+pub static JMDICT_SENSE_MISC: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#""misc":\[(.*?)\]"#).unwrap());
+
 static ESTIMATED_JMDICT_SIZE: usize = 1_000_000;
 
 pub static MAX_WORD_RANK: usize = 400_000;
@@ -306,6 +309,22 @@ pub fn load_words(kanji_data: &KanjiData) -> Result<WordData> {
             rdr.lines()
                 .filter_map(|str| {
                     let str = str.ok()?;
+
+                    let mut sfw = false;
+                    for sense_tags in JMDICT_SENSE_MISC.captures_iter(&str) {
+                        let sense_tags = sense_tags.get(1)?.as_str();
+                        if !sense_tags.contains("sens")
+                            && !sense_tags.contains("vulg")
+                            && (!sense_tags.contains("derog") || sense_tags.contains("fam"))
+                        {
+                            sfw = true;
+                            break;
+                        }
+                    }
+                    if !sfw {
+                        return None;
+                    }
+
                     let (_, [place]) = JMDICT_KANJI_PLACE.captures(&str)?.extract();
                     let mut xs = TWO_KANJI_IN_STRING
                         .captures_iter(place)
